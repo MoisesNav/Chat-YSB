@@ -37,9 +37,3 @@ def procesar_mensaje(data: Mensaje):
         return JSONResponse(content={"respuesta": respuesta})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-# Para poder correr localmente con python app.py (opcional)
-if __name__ == "__main__":
-    import os
-    uvicorn.run("app:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
