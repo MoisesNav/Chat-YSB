@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Chat Yo Soy Bienestar</title>
+<style>
+    body { font-family: Arial; background:#f3f3f3; }
+    #chatbox { 
+        width: 400px; height: 500px; 
+        margin: auto; margin-top: 40px;
+        background: white; padding: 20px; 
+        border-radius: 10px;
+        overflow-y: auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .msg { margin: 10px 0; padding: 10px; border-radius: 5px; }
+    .user { background: #d1e7ff; text-align: right; }
+    .bot { background: #e2e2e2; text-align: left; }
+    #inputBox { width: 400px; margin: auto; display:flex; gap:10px; }
+    input { flex: 1; padding:10px; border-radius:5px; border:1px solid #ccc; }
+    button { padding:10px 15px; border:none; background:#007bff; color:white; border-radius:5px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div id="chatbox"></div>
+
+<div id="inputBox">
+    <input id="mensaje" placeholder="Escribe aquí..." />
+    <button onclick="enviar()">Enviar</button>
+</div>
+
+<script>
+async function enviar() {
+    const input = document.getElementById("mensaje");
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    agregarMensaje(texto, "user");
+
+    const respuesta = await fetch("/mensaje", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texto })
+    });
+
+    const data = await respuesta.json();
+    agregarMensaje(data.respuesta, "bot");
+    input.value = "";
+}
+
+function agregarMensaje(texto, tipo) {
+    const chat = document.getElementById("chatbox");
+    const div = document.createElement("div");
+    div.className = "msg " + tipo;
+    div.innerText = texto;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
+</script>
+
+</body>
+</html>
