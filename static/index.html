@@ -2,101 +2,61 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Chat Yo Soy Bienestar</title>
+<title>Chat Bienestar</title>
 <style>
-    body { font-family: Arial; background:#f3f3f3; }
-    #chatbox { 
-        width: 420px; height: 520px; 
-        margin: auto; margin-top: 40px;
-        background: white; padding: 20px; 
-        border-radius: 10px;
-        overflow-y: auto;
-        box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    .msg { margin: 10px 0; padding: 10px; border-radius: 5px; max-width: 90%; word-wrap: break-word; }
-    .user { background: #d1e7ff; text-align: right; margin-left: auto; }
-    .bot { background: #e2e2e2; text-align: left; margin-right: auto; }
-    #inputBox { width: 420px; margin: auto; display:flex; gap:10px; margin-top:10px; }
-    input { flex: 1; padding:10px; border-radius:5px; border:1px solid #ccc; }
-    button { padding:10px 15px; border:none; background:#007bff; color:white; border-radius:5px; cursor:pointer; }
-    #meta { text-align:center; color:#666; margin-top:8px; }
+body { font-family: Arial; background: #f3f3f3; padding: 20px; }
+#chat { background: white; padding: 10px; height: 400px; overflow-y: scroll; border-radius: 8px; }
+.msg-user { text-align: right; color: blue; margin: 5px 0; }
+.msg-bot { text-align: left; color: green; margin: 5px 0; }
 </style>
 </head>
 <body>
 
-<div id="chatbox"></div>
+<h2>Chat Yo Soy Bienestar</h2>
 
-<div id="inputBox">
-    <input id="mensaje" placeholder="Escribe aquí..." />
-    <button onclick="enviar()">Enviar</button>
-</div>
-<div id="meta">Sesión: <span id="sessionLabel">-</span></div>
+<button onclick="nuevaSesion()">Nuevo chat</button>
+
+<div id="chat"></div>
+
+<br>
+<input id="input" type="text" placeholder="Escribe..." style="width:80%">
+<button onclick="enviar()">Enviar</button>
 
 <script>
-const STORAGE_KEY = "ysb_session_id";
+let session_id = null;
 
-function getSessionId() {
-    let sid = localStorage.getItem(STORAGE_KEY);
-    if (!sid) {
-        // no lo pedimos al backend, lo creerá si no existe
-        sid = null;
-    }
-    return sid;
-}
-
-function setSessionId(sid) {
-    if (sid) {
-        localStorage.setItem(STORAGE_KEY, sid);
-        document.getElementById("sessionLabel").innerText = sid.slice(0,8) + "...";
-    }
-}
-
-function agregarMensaje(texto, tipo) {
-    const chat = document.getElementById("chatbox");
-    const div = document.createElement("div");
-    div.className = "msg " + tipo;
-    div.innerText = texto;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+// Crear sesión al iniciar
+async function nuevaSesion() {
+    const res = await fetch("http://localhost:8080/nueva_sesion");
+    const data = await res.json();
+    session_id = data.session_id;
+    document.getElementById("chat").innerHTML =
+        "<div class='msg-bot'><b>Chat reiniciado</b></div>";
 }
 
 async function enviar() {
-    const input = document.getElementById("mensaje");
-    const texto = input.value.trim();
-    if (!texto) return;
+    const texto = document.getElementById("input").value;
+    if (!session_id) await nuevaSesion();  // crea sesión si no existe
 
-    agregarMensaje(texto, "user");
-    input.value = "";
+    document.getElementById("chat").innerHTML +=
+        `<div class='msg-user'>${texto}</div>`;
 
-    const session_id = getSessionId();
+    const res = await fetch("http://localhost:8080/mensajear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id, mensaje: texto })
+    });
 
-    try {
-        const respuesta = await fetch("/mensaje", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_id: session_id, texto: texto })
-        });
+    const data = await res.json();
+    document.getElementById("chat").innerHTML +=
+        `<div class='msg-bot'>${data.respuesta}</div>`;
 
-        const data = await respuesta.json();
-
-        if (data.session_id) {
-            setSessionId(data.session_id);
-        }
-        agregarMensaje(data.respuesta || (data.error || "Error en servidor"), "bot");
-    } catch (err) {
-        agregarMensaje("❌ Error al contactar el servidor.", "bot");
-        console.error(err);
-    }
+    document.getElementById("input").value = "";
+    document.getElementById("chat").scrollTop = chat.scrollHeight;
 }
 
-// Cuando se abre la página, mostrar session label si existe
-document.addEventListener("DOMContentLoaded", () => {
-    const sid = getSessionId();
-    if (sid) setSessionId(sid);
-    else document.getElementById("sessionLabel").innerText = "nueva sesión";
-    // Opcional: iniciar conversación automática con 'Hola'
-    // enviarMensajeInicial();
-});
+// iniciar sesión automática
+nuevaSesion();
 </script>
 
 </body>
